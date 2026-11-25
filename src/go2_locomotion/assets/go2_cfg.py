@@ -5,21 +5,15 @@
 
 """Project-owned Unitree Go2 robot configuration."""
 
-from pathlib import Path
-
-from isaaclab_newton.sim.schemas import NewtonArticulationCfg
-from isaaclab_physx.sim.schemas import PhysxArticulationCfg, PhysxRigidBodyCfg
-
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import DCMotorCfg
 from isaaclab.assets.articulation import ArticulationCfg
+from isaaclab_newton.sim.schemas import NewtonArticulationCfg
+from isaaclab_physx.sim.schemas import PhysxArticulationCfg, PhysxRigidBodyCfg
 
-GO2_USD_PATH = (
-    Path(__file__).resolve().parent
-    / "data/go2"
-    / "isaaclab_usd_6b05af4d27784e9fa10be1e289491635"
-    / "1/go2.usd"
-)
+from go2_locomotion.assets.paths import get_go2_usd_path
+
+GO2_USD_PATH = get_go2_usd_path()
 
 GO2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(

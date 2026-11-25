@@ -9,3 +9,4 @@ Isaac Lab version:
 v3.0.0
 
 Isaac Lab working tree:
+clean (verified 2026-11-25)
