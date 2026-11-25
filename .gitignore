@@ -15,3 +15,32 @@ wandb/
 .vscode/settings.json
 .vscode/launch.json
 pyrightconfig.json
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# Training outputs
+logs/
+runs/
+wandb/
+checkpoints/
+results/
+
+# Trained policies
+*.pt
+*.pth
+*.onnx
+
+# Cache and temporary files
+.cache/
+*.log
+.pytest_cache/
+.ruff_cache/
+
+# VS Code database
+.vscode/browse.vc.db*
+
+# Robot asset data
+src/go2_locomotion/assets/data/go2/

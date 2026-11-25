@@ -1,0 +1,1 @@
+"""Project-specific termination conditions."""
