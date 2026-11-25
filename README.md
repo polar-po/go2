@@ -6,23 +6,15 @@ Isaac Lab 3.0 External Project를 기반으로 구성하며,
 로봇 모델과 설정은 독립적으로 관리하고
 학습 환경 및 강화학습 알고리즘은 기존 프레임워크를 재사용한다.
 
-## 1. 개발 환경
+## 1. 개발 환경과 문서
 
-| 항목 | 설정 |
-|---|---|
-| OS | Ubuntu 22.04 |
-| GPU | NVIDIA RTX 3060 12GB |
-| Python | 3.12.13 |
-| 패키지 관리자 | uv |
-| Isaac Lab | 3.0 |
-| PyTorch | 2.11.0+cu130 |
-| Newton | 1.6.1 |
-| MuJoCo | 3.12.0 |
-| MuJoCo Warp | 3.12.0 |
-| NVIDIA Warp | 1.17.0 |
-| RSL-RL | 5.5.1 |
-| 물리 엔진 | newton_mjwarp |
-| 시각화 | newton_gl |
+Ubuntu 22.04, RTX 3060 12GB, Python 3.12와 uv를 사용한다.
+Isaac Sim 없이 Newton + MuJoCo Warp로 실행하며 시각화는 Newton GL을 사용한다.
+
+- [환경 설치 및 USD 복원](docs/environment.md)
+- [현재 구현과 설정 상속 구조](docs/architecture.md)
+- [협업 및 변경 규칙](AGENTS.md)
+- [공통 Isaac Lab 버전 기록](docs/isaaclab_version.txt)
 
 ## 2. 설치 및 환경 구성
 
@@ -38,11 +30,14 @@ Isaac Lab 3.0 External Project를 기반으로 구성하며,
 
 가상환경 설치:
 
-    uv sync
+    env -u PYTHONPATH uv sync --locked
 
 Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
 프로젝트 경로가 변경되면 pyproject.toml의
 [tool.uv.sources] 경로를 확인해야 한다.
+
+새 PC에서는 [설치 순서](docs/environment.md)를 먼저 따른다.
+이 저장소를 clone하는 것만으로 공통 Isaac Lab과 로봇 USD까지 설치되지는 않는다.
 
 ## 3. 프로젝트 구조
 
@@ -50,6 +45,7 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
     ├── src/go2_locomotion/
     │   ├── assets/
     │   │   ├── go2_cfg.py
+    │   │   ├── paths.py
     │   │   └── data/go2/
     │   ├── terrains/
     │   │   ├── flat.py
@@ -73,6 +69,7 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
     │           └── agents/
     │               └── rsl_rl_ppo_cfg.py
     ├── scripts/
+    │   └── restore_assets.py
     ├── tests/
     ├── configs/
     ├── docs/
@@ -92,8 +89,8 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
 | 험지 환경 | 공식 Rough 환경 상속 |
 | PPO 설정 | 공식 RSL-RL 설정 상속 |
 | 기존 MDP 함수 | 명시적 import |
-| 사용자 정의 MDP | 직접 구현 |
-| 사용자 정의 지형 | 직접 구현 |
+| 사용자 정의 MDP | 예약 파일, 미구현 |
+| 사용자 정의 지형 | 예약 파일, 미구현 |
 | 물리 엔진 | Newton + MuJoCo Warp |
 | 학습 및 재생 | Isaac Lab 공식 CLI |
 
@@ -101,6 +98,8 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
 
 현재 MDP 개별 모듈, 지형 모듈, velocity_env_cfg.py 및
 일부 scripts 파일은 향후 연구를 위한 예약 파일이다.
+`scripts/restore_assets.py`는 모델 복원 도구이고,
+`scripts/list_envs.py`는 공식 CLI를 호출하는 호환 래퍼이다.
 
 ## 5. 로봇 기본 설정
 
@@ -154,7 +153,7 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
         --num_envs 512 \
         --viz none \
         --seed 42 \
-        --run_name baseline \
+        --run_name learning \
         physics=newton_mjwarp
 
 ### 학습된 정책 재생
@@ -183,36 +182,22 @@ Isaac Lab은 로컬 소스를 editable dependency로 참조한다.
 
 ### 테스트 및 코드 품질 검사
 
-    uv run pytest
-    uv run pre-commit run --all-files
+    env -u PYTHONPATH PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run --locked pytest -q
 
-전체 테스트 및 코드 품질 검사 통과 여부는 별도 검증이 필요하다.
+이 검사는 Task 등록과 모델 경로·복원 처리를 확인하며 학습이나 시뮬레이션을 실행하지 않는다.
+ROS의 Python 경로와 관계없는 pytest 플러그인이 개입하지 않도록 환경 변수를 지정한다.
 
-## 8. Baseline 학습 결과
+Git 훅은 선택적으로 설치할 수 있다.
 
-최초 학습일: 2026-11-25
+    uv run --locked pre-commit install
+    uv run --locked pre-commit run --all-files
 
-기준 태그: baseline-v0.1.0
+pre-commit에는 자동 포맷 및 수정 훅이 포함되어 있으므로 파일이 변경될 수 있다.
 
-| 항목 | 결과 |
-|---|---:|
-| 병렬 환경 | 512 |
-| Learning iterations | 300 |
-| Total steps | 3,686,400 |
-| 최종 Steps per second | 48,394 |
-| Training time | 78.68 s |
-| Mean reward | 2.63 |
-| Mean episode length | 901.22 |
-| XY velocity error | 0.8802 |
-| Yaw velocity error | 0.3145 |
-| Time-out termination | 0.8182 |
-| Base-contact termination | 0.1818 |
-| Success rate | 0.0000 |
+## 8. 실행 확인 상태
 
-위 결과는 마지막 학습 iteration 기준이며,
-독립적인 정책 성능 평가 결과는 아니다.
-
-평지 학습 및 CUDA 기반 정책 재생을 확인하였다.
+2026-11-25에 평지 학습과 CUDA 기반 정책 재생을 실행 확인하였다.
+최초 실행은 설치 및 학습 경로 확인용이며 정책 성능의 비교 기준으로 사용하지 않는다.
 험지 환경의 실제 학습 및 재생은 추가 검증이 필요하다.
 
 ## 9. Git 관리
@@ -235,12 +220,22 @@ USD 모델은 재배포 라이선스 확인 전까지 로컬에서 관리한다.
 
 https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.2/Isaac/IsaacLab/Robots/Unitree/Go2/go2.usd
 
-모델 다운로드에는 Isaac Lab의 retrieve_file_path()를 사용한다.
+모델 복원:
 
-다운로드 이후 실제 USD 경로가 go2_cfg.py의
-GO2_USD_PATH와 일치하는지 확인해야 한다.
+    env -u PYTHONPATH uv run --locked python scripts/restore_assets.py
 
-모델 자동 복원 기능은 추후 구현한다.
+현재 모델 검사만 수행:
+
+    env -u PYTHONPATH uv run --locked python scripts/restore_assets.py --check
+
+기존 모델이 있으면 다시 다운로드하지 않는다.
+새로 다운로드한 모델은 참조 관계 검사 후 로컬 manifest에 경로와 SHA-256을 기록한다.
+자동 네트워크 접근은 Task import나 학습 시작 시 수행하지 않는다.
+다른 PC로 복원하는 방법과 해시 검사의 범위는 [환경 문서](docs/environment.md)에 설명한다.
+
+GitHub에는 소스와 문서를 push하고, 학습 로그와 모델 데이터는 별도로 보관한다.
+`baseline-v0.1.0`은 최초 실행 확인 시점의 기존 태그로 유지한다.
+기능 수정은 별도 브랜치에서 진행하고, 변경 검토 후 `main`에 반영한다.
 
 ## 10. 연구 계획
 
@@ -248,10 +243,10 @@ GO2_USD_PATH와 일치하는지 확인해야 한다.
 - [x] 독립적인 Go2 External Project 구축
 - [x] Go2 로봇 모델 및 설정 독립 관리
 - [x] 평지 및 험지 Task 등록
-- [x] 평지 Baseline 학습
+- [x] 평지 학습 실행 확인
 - [x] 학습된 정책 재생
 - [x] GitHub 초기 버전 백업
-- [ ] 로봇 모델 자동 복원
+- [x] 명시적 로봇 모델 복원 및 참조 검사 도구
 - [ ] 보행 환경 및 제어 구조 분석
 - [ ] 관측 공간 및 행동 공간 분석
 - [ ] 보상함수 설계
@@ -264,4 +259,3 @@ GO2_USD_PATH와 일치하는지 확인해야 한다.
 - [ ] Sim2Sim
 - [ ] Sim2Real
 - [ ] Loco-Manipulation
-
